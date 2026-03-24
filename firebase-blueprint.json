@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string", "description": "User's display name" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "photoURL": { "type": "string", "description": "User's profile picture URL" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "User's role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" }
+      },
+      "required": ["displayName", "email", "role", "createdAt"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task item",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Task title" },
+        "description": { "type": "string", "description": "Task description" },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "done"], "description": "Task status" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"], "description": "Task priority" },
+        "ownerId": { "type": "string", "description": "UID of the task owner" },
+        "dueDate": { "type": "string", "format": "date-time", "description": "Task due date" },
+        "reminderMinutesBefore": { "type": "integer", "description": "Minutes before due date to trigger reminder" },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "url": { "type": "string" },
+              "type": { "type": "string" },
+              "size": { "type": "integer" },
+              "uploadedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Task creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Task last update timestamp" }
+      },
+      "required": ["title", "status", "priority", "ownerId", "createdAt", "updatedAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a task",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "Comment content" },
+        "authorId": { "type": "string", "description": "UID of the comment author" },
+        "authorName": { "type": "string", "description": "Name of the comment author" },
+        "authorPhoto": { "type": "string", "description": "Photo URL of the comment author" },
+        "parentId": { "type": "string", "description": "ID of the parent comment (for threading)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Comment creation timestamp" }
+      },
+      "required": ["text", "authorId", "authorName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Task items"
+    },
+    "/tasks/{taskId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments on a task"
+    }
+  }
+}

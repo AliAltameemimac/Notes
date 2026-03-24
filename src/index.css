@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
+  
+  --color-brand-50: #f5f7ff;
+  --color-brand-100: #ebf0fe;
+  --color-brand-200: #ced9fd;
+  --color-brand-300: #b1c2fb;
+  --color-brand-400: #7694f8;
+  --color-brand-500: #3b66f5;
+  --color-brand-600: #355cdc;
+  --color-brand-700: #2c4da7;
+  --color-brand-800: #233d86;
+  --color-brand-900: #1d326d;
+  --color-brand-950: #111e41;
+}
+
+@layer base {
+  body {
+    @apply bg-[#f8fafc] text-slate-900 antialiased;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(59, 102, 245, 0.03) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.03) 0px, transparent 50%);
+  }
+}
+
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
+}
+
+.glass-dark {
+  @apply bg-slate-900/90 backdrop-blur-md border border-slate-800/50 shadow-xl;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:shadow-brand-500/10 hover:-translate-y-1;
+}

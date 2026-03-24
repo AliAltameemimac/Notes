@@ -1,0 +1,5 @@
+{
+  "name": "TaskFlow",
+  "description": "A streamlined task management application with real-time updates and user authentication.",
+  "requestFramePermissions": []
+}

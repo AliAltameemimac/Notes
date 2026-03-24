@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required, matches auth.uid)
+    //   - displayName: string (required)
+    //   - email: string (required, format: email)
+    //   - photoURL: string (optional)
+    //   - role: string (required, enum: ['admin', 'user'])
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: tasks
+    // Document ID: taskId (Auto-generated)
+    // Fields:
+    //   - title: string (required, size: 1-100)
+    //   - description: string (optional, size: 0-1000)
+    //   - status: string (required, enum: ['todo', 'in-progress', 'done'])
+    //   - priority: string (required, enum: ['low', 'medium', 'high'])
+    //   - ownerId: string (required, matches auth.uid)
+    //   - dueDate: timestamp (optional)
+    //   - reminderMinutesBefore: int (optional)
+    //   - attachments: list (optional)
+    //   - createdAt: timestamp (required)
+    //   - updatedAt: timestamp (required)
+    //
+    // Collection: tasks/{taskId}/comments
+    // Document ID: commentId (Auto-generated)
+    // Fields:
+    //   - text: string (required, size: 1-2000)
+    //   - authorId: string (required, matches auth.uid)
+    //   - authorName: string (required)
+    //   - authorPhoto: string (optional)
+    //   - parentId: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email == "aaltameemi057@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'photoURL', 'role', 'createdAt']) &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+        isValidEmail(data.email) &&
+        data.role in ['admin', 'user'] &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidTask(data) {
+      return hasOnlyAllowedFields(['title', 'description', 'status', 'priority', 'ownerId', 'dueDate', 'reminderMinutesBefore', 'attachments', 'createdAt', 'updatedAt']) &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+        data.status in ['todo', 'in-progress', 'done'] &&
+        data.priority in ['low', 'medium', 'high'] &&
+        data.ownerId == request.auth.uid &&
+        (!('dueDate' in data) || data.dueDate == null || data.dueDate is timestamp) &&
+        (!('reminderMinutesBefore' in data) || data.reminderMinutesBefore is int) &&
+        (!('attachments' in data) || data.attachments is list) &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return hasOnlyAllowedFields(['text', 'authorId', 'authorName', 'authorPhoto', 'parentId', 'createdAt']) &&
+        data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
+        data.authorId == request.auth.uid &&
+        data.authorName is string && data.authorName.size() > 0 &&
+        (!('authorPhoto' in data) || data.authorPhoto is string) &&
+        (!('parentId' in data) || data.parentId is string) &&
+        data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidTask(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.ownerId == request.auth.uid && isValidTask(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+
+      match /comments/{commentId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid || isAdmin());
+        allow create: if isAuthenticated() && (get(/databases/$(database)/documents/tasks/$(taskId)).data.ownerId == request.auth.uid || isAdmin()) && isValidComment(request.resource.data);
+        allow delete: if isAuthenticated() && (resource.data.authorId == request.auth.uid || isAdmin());
+      }
+    }
+  }
+}
